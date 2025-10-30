@@ -18,11 +18,10 @@ public class UserServiceImpl implements UserService {
     public UserDto create(UserDto userDto) {
 
         // проверка уникальности email
-        for (User existingUser : userRepository.findAll()) {
-            if (existingUser.getEmail().equals(userDto.getEmail())) {
-                throw new IllegalArgumentException("Email already exists");
-            }
-        }
+        userRepository.findByEmail(userDto.getEmail())
+                .ifPresent(existingUser -> {
+                    throw new IllegalArgumentException("Email already exists");
+                });
 
         User user = UserMapper.toUser(userDto);
         return UserMapper.toUserDto(userRepository.save(user));
@@ -35,11 +34,12 @@ public class UserServiceImpl implements UserService {
 
         // проверка уникальности email при обновлении
         if (userDto.getEmail() != null && !existingUser.getEmail().equals(userDto.getEmail())) {
-            for (User user : userRepository.findAll()) {
-                if (user.getEmail().equals(userDto.getEmail()) && !user.getId().equals(userId)) {
-                    throw new IllegalArgumentException("Email already exists");
-                }
-            }
+            userRepository.findByEmail(userDto.getEmail())
+                    .ifPresent(userWithSameEmail -> {
+                        if (!userWithSameEmail.getId().equals(userId)) {
+                            throw new IllegalArgumentException("Email already exists");
+                        }
+                    });
         }
 
         if (userDto.getName() != null) existingUser.setName(userDto.getName());

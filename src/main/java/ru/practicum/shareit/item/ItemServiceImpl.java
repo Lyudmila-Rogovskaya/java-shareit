@@ -2,7 +2,8 @@ package ru.practicum.shareit.item;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.ItemRequestDto;
+import ru.practicum.shareit.item.dto.ItemResponseDto;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.UserRepository;
 
@@ -19,16 +20,16 @@ public class ItemServiceImpl implements ItemService {
     private final UserRepository userRepository;
 
     @Override
-    public ItemDto create(Long userId, ItemDto itemDto) {
+    public ItemResponseDto create(Long userId, ItemRequestDto itemRequestDto) {
         userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
-        Item item = ItemMapper.toItem(itemDto, userId);
-        return ItemMapper.toItemDto(itemRepository.save(item));
+        Item item = ItemMapper.toItem(itemRequestDto, userId);
+        return ItemMapper.toItemResponseDto(itemRepository.save(item));
     }
 
     @Override
-    public ItemDto update(Long userId, Long itemId, ItemDto itemDto) {
+    public ItemResponseDto update(Long userId, Long itemId, ItemRequestDto itemRequestDto) {
         Item existingItem = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NoSuchElementException("Item not found"));
 
@@ -36,39 +37,39 @@ public class ItemServiceImpl implements ItemService {
             throw new NoSuchElementException("User is not owner");
         }
 
-        if (itemDto.getName() != null) existingItem.setName(itemDto.getName());
-        if (itemDto.getDescription() != null) existingItem.setDescription(itemDto.getDescription());
-        if (itemDto.getAvailable() != null) existingItem.setAvailable(itemDto.getAvailable());
+        if (itemRequestDto.getName() != null) existingItem.setName(itemRequestDto.getName());
+        if (itemRequestDto.getDescription() != null) existingItem.setDescription(itemRequestDto.getDescription());
+        if (itemRequestDto.getAvailable() != null) existingItem.setAvailable(itemRequestDto.getAvailable());
 
-        return ItemMapper.toItemDto(itemRepository.update(existingItem));
+        return ItemMapper.toItemResponseDto(itemRepository.update(existingItem));
     }
 
     @Override
-    public ItemDto getById(Long itemId) {
+    public ItemResponseDto getById(Long itemId) {
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NoSuchElementException("Item not found"));
-        return ItemMapper.toItemDto(item);
+        return ItemMapper.toItemResponseDto(item);
     }
 
     @Override
-    public List<ItemDto> getByOwnerId(Long ownerId) {
-        List<ItemDto> result = new ArrayList<>();
+    public List<ItemResponseDto> getByOwnerId(Long ownerId) {
+        List<ItemResponseDto> result = new ArrayList<>();
         for (Item item : itemRepository.findByOwnerId(ownerId)) {
-            result.add(ItemMapper.toItemDto(item));
+            result.add(ItemMapper.toItemResponseDto(item));
         }
         return result;
     }
 
     @Override
-    public List<ItemDto> search(String text) {
+    public List<ItemResponseDto> search(String text) {
 
         if (text == null || text.isBlank()) {
             return Collections.emptyList();
         }
 
-        List<ItemDto> result = new ArrayList<>();
+        List<ItemResponseDto> result = new ArrayList<>();
         for (Item item : itemRepository.search(text)) {
-            result.add(ItemMapper.toItemDto(item));
+            result.add(ItemMapper.toItemResponseDto(item));
         }
         return result;
     }
