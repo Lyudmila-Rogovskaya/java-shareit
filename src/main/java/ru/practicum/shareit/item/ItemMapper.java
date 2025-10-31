@@ -12,17 +12,20 @@ public class ItemMapper {
                 item.getName(),
                 item.getDescription(),
                 item.getAvailable(),
-                item.getRequestId()
+                item.getRequestId(),
+                null, // lastBooking будет заполнено в сервисе
+                null, // nextBooking будет заполнено в сервисе
+                null  // comments будет заполнено в сервисе
         );
     }
 
-    public static Item toItem(ItemRequestDto itemRequestDto, Long ownerId) {
+    public static Item toItem(ItemRequestDto itemRequestDto) {
         return new Item(
                 null,
                 itemRequestDto.getName(),
                 itemRequestDto.getDescription(),
                 itemRequestDto.getAvailable(),
-                ownerId,
+                null,
                 itemRequestDto.getRequestId()
         );
     }
