@@ -1,10 +1,12 @@
 package ru.practicum.shareit.user;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.user.dto.UserDto;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @Service
@@ -15,6 +17,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto create(UserDto userDto) {
+        userRepository.findByEmail(userDto.getEmail()).ifPresent(u -> {
+            throw new DataIntegrityViolationException("Email already exists");
+        });
+
         User user = UserMapper.toUser(userDto);
         return UserMapper.toUserDto(userRepository.save(user));
     }
@@ -22,7 +28,13 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto update(Long userId, UserDto userDto) {
         User existingUser = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        if (userDto.getEmail() != null &&
+                !userDto.getEmail().equals(existingUser.getEmail()) &&
+                userRepository.findByEmail(userDto.getEmail()).isPresent()) {
+            throw new DataIntegrityViolationException("Email already exists");
+        }
 
         if (userDto.getName() != null) existingUser.setName(userDto.getName());
         if (userDto.getEmail() != null) existingUser.setEmail(userDto.getEmail());
@@ -33,7 +45,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto getById(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
         return UserMapper.toUserDto(user);
     }
 

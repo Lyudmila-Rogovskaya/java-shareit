@@ -1,10 +1,10 @@
 package ru.practicum.shareit.item;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.BookingRepository;
+import ru.practicum.shareit.booking.BookingStatus;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.item.dto.ItemRequestDto;
 import ru.practicum.shareit.item.dto.ItemResponseDto;
@@ -29,16 +29,24 @@ public class ItemServiceImpl implements ItemService {
     private final CommentRepository commentRepository;
 
     @Override
+    @Transactional
     public ItemResponseDto create(Long userId, ItemRequestDto itemRequestDto) {
         User owner = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
-        Item item = ItemMapper.toItem(itemRequestDto);
+        Item item = new Item();
+        item.setName(itemRequestDto.getName());
+        item.setDescription(itemRequestDto.getDescription());
+        item.setAvailable(itemRequestDto.getAvailable());
         item.setOwner(owner);
-        return ItemMapper.toItemResponseDto(itemRepository.save(item));
+        item.setRequestId(itemRequestDto.getRequestId());
+
+        Item savedItem = itemRepository.save(item);
+        return toItemResponseDto(savedItem);
     }
 
     @Override
+    @Transactional
     public ItemResponseDto update(Long userId, Long itemId, ItemRequestDto itemRequestDto) {
         Item existingItem = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NoSuchElementException("Item not found"));
@@ -47,26 +55,45 @@ public class ItemServiceImpl implements ItemService {
             throw new NoSuchElementException("Item not found or user is not owner");
         }
 
-        if (itemRequestDto.getName() != null) existingItem.setName(itemRequestDto.getName());
-        if (itemRequestDto.getDescription() != null) existingItem.setDescription(itemRequestDto.getDescription());
-        if (itemRequestDto.getAvailable() != null) existingItem.setAvailable(itemRequestDto.getAvailable());
+        if (itemRequestDto.getName() != null) {
+            existingItem.setName(itemRequestDto.getName());
+        }
+        if (itemRequestDto.getDescription() != null) {
+            existingItem.setDescription(itemRequestDto.getDescription());
+        }
+        if (itemRequestDto.getAvailable() != null) {
+            existingItem.setAvailable(itemRequestDto.getAvailable());
+        }
 
-        return ItemMapper.toItemResponseDto(itemRepository.save(existingItem));
+        Item updatedItem = itemRepository.save(existingItem);
+        return toItemResponseDto(updatedItem);
+    }
+
+    private ItemResponseDto toItemResponseDto(Item item) {
+        ItemResponseDto dto = new ItemResponseDto();
+        dto.setId(item.getId());
+        dto.setName(item.getName());
+        dto.setDescription(item.getDescription());
+        dto.setAvailable(item.getAvailable());
+        dto.setRequestId(item.getRequestId());
+        dto.setComments(List.of());
+
+        return dto;
     }
 
     @Override
     public ItemResponseDto getById(Long itemId, Long userId) {
         Item item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("Item not found"));
+                .orElseThrow(() -> new NoSuchElementException("Item not found"));
 
-        ItemResponseDto dto = ItemMapper.toItemResponseDto(item);
+        ItemResponseDto dto = toItemResponseDto(item);
 
         // добавляем информацию о бронированиях только для владельца
         if (item.getOwner().getId().equals(userId)) {
             addBookingInfoToDto(dto, itemId);
         }
 
-        // добавляем комментарии всегда
+        // всегда добавляем комментарии для всех пользователей
         addCommentsToDto(dto, itemId);
 
         return dto;
@@ -90,26 +117,32 @@ public class ItemServiceImpl implements ItemService {
             return List.of();
         }
         return itemRepository.search(text).stream()
-                .map(ItemMapper::toItemResponseDto)
+                .map(item -> {
+                    ItemResponseDto dto = toItemResponseDto(item);
+                    dto.setLastBooking(null);
+                    dto.setNextBooking(null);
+                    dto.setComments(List.of());
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
     @Override
+    @Transactional
     public CommentResponseDto addComment(Long itemId, CommentRequestDto commentRequestDto, Long userId) {
         User author = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
         Item item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new RuntimeException("Item not found"));
+                .orElseThrow(() -> new NoSuchElementException("Item not found"));
 
-        // проверка, что пользователь брал вещь в аренду
-        List<Booking> userBookings = bookingRepository.findByBookerIdAndEndBefore(userId, LocalDateTime.now(),
-                Sort.by(Sort.Direction.DESC, "end"));
+        List<Booking> userBookings = bookingRepository.findByBooker_IdAndItem_IdAndEndBefore(
+                userId, itemId, LocalDateTime.now());
 
-        boolean hasBooked = userBookings.stream()
-                .anyMatch(booking -> booking.getItem().getId().equals(itemId));
+        boolean hasValidBooking = userBookings.stream()
+                .anyMatch(booking -> booking.getStatus() != BookingStatus.REJECTED);
 
-        if (!hasBooked) {
-            throw new RuntimeException("User has not booked this item");
+        if (!hasValidBooking) {
+            throw new IllegalArgumentException("User can only comment on items they have booked in the past");
         }
 
         Comment comment = new Comment();

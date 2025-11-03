@@ -29,6 +29,22 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponseDto create(BookingRequestDto bookingRequestDto, Long bookerId) {
+
+        if (bookingRequestDto.getStart() == null || bookingRequestDto.getEnd() == null) {
+            throw new IllegalArgumentException("Start and end dates are required");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        if (bookingRequestDto.getStart().isBefore(now)) {
+            throw new IllegalArgumentException("Start date cannot be in the past");
+        }
+        if (bookingRequestDto.getEnd().isBefore(bookingRequestDto.getStart())) {
+            throw new IllegalArgumentException("End date must be after start date");
+        }
+        if (bookingRequestDto.getEnd().equals(bookingRequestDto.getStart())) {
+            throw new IllegalArgumentException("Start and end dates cannot be equal");
+        }
+
         User booker = userRepository.findById(bookerId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
         Item item = itemRepository.findById(bookingRequestDto.getItemId())
@@ -38,7 +54,7 @@ public class BookingServiceImpl implements BookingService {
             throw new IllegalArgumentException("Item is not available");
         }
         if (item.getOwner().getId().equals(bookerId)) {
-            throw new IllegalArgumentException("Owner cannot book own item");
+            throw new NoSuchElementException("Owner cannot book own item");
         }
 
         Booking booking = new Booking();
@@ -48,33 +64,36 @@ public class BookingServiceImpl implements BookingService {
         booking.setBooker(booker);
         booking.setStatus(BookingStatus.WAITING);
 
-        return toBookingResponseDto(bookingRepository.save(booking));
+        Booking savedBooking = bookingRepository.save(booking);
+        return toBookingResponseDto(savedBooking);
     }
 
     @Override
     @Transactional
     public BookingResponseDto update(Long bookingId, Long ownerId, Boolean approved) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new NoSuchElementException("Booking not found"));
 
         if (!booking.getItem().getOwner().getId().equals(ownerId)) {
-            throw new RuntimeException("Only owner can update booking status");
+            throw new IllegalArgumentException("Only owner can update booking status");
         }
+
         if (booking.getStatus() != BookingStatus.WAITING) {
-            throw new RuntimeException("Booking status already decided");
+            throw new IllegalArgumentException("Booking status already decided");
         }
 
         booking.setStatus(approved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
-        return toBookingResponseDto(bookingRepository.save(booking));
+        Booking updatedBooking = bookingRepository.save(booking);
+        return toBookingResponseDto(updatedBooking);
     }
 
     @Override
     public BookingResponseDto getById(Long bookingId, Long userId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new NoSuchElementException("Booking not found"));
 
         if (!booking.getBooker().getId().equals(userId) && !booking.getItem().getOwner().getId().equals(userId)) {
-            throw new RuntimeException("Access denied");
+            throw new NoSuchElementException("Access denied");
         }
 
         return toBookingResponseDto(booking);
@@ -82,7 +101,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public List<BookingResponseDto> getByBookerId(Long bookerId, String state) {
-        userRepository.findById(bookerId).orElseThrow(() -> new RuntimeException("User not found"));
+        userRepository.findById(bookerId).orElseThrow(() -> new NoSuchElementException("User not found"));
         Sort sort = Sort.by(Sort.Direction.DESC, "start");
 
         switch (state.toUpperCase()) {
@@ -91,7 +110,8 @@ public class BookingServiceImpl implements BookingService {
                         .map(this::toBookingResponseDto)
                         .collect(Collectors.toList());
             case "CURRENT":
-                return bookingRepository.findByBookerId(bookerId, sort).stream()
+                LocalDateTime now = LocalDateTime.now();
+                return bookingRepository.findCurrentBookingsByBooker(bookerId, now, sort).stream()
                         .map(this::toBookingResponseDto)
                         .collect(Collectors.toList());
             case "PAST":
@@ -109,7 +129,7 @@ public class BookingServiceImpl implements BookingService {
                         .map(this::toBookingResponseDto)
                         .collect(Collectors.toList());
             default:
-                throw new RuntimeException("Unknown state: " + state);
+                throw new IllegalArgumentException("Unknown state: " + state);
         }
     }
 
@@ -124,7 +144,7 @@ public class BookingServiceImpl implements BookingService {
                         .map(this::toBookingResponseDto)
                         .collect(Collectors.toList());
             case "CURRENT":
-                return bookingRepository.findCurrentBookingsByBooker(ownerId, LocalDateTime.now(), sort).stream()
+                return bookingRepository.findCurrentBookingsByOwner(ownerId, LocalDateTime.now(), sort).stream()
                         .map(this::toBookingResponseDto)
                         .collect(Collectors.toList());
             case "PAST":

@@ -12,7 +12,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BookingController {
 
-    private final BookingService bookingService; // Должно быть final
+    private final BookingService bookingService;
     private static final String USER_ID_HEADER = "X-Sharer-User-Id";
 
     @PostMapping
