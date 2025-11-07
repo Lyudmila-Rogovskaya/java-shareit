@@ -1,9 +1,5 @@
 package ru.practicum.shareit.item;
 
-/**
- * TODO Sprint add-controllers.
- */
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -34,8 +30,9 @@ public class ItemController {
     }
 
     @GetMapping("/{itemId}")
-    public ItemResponseDto getById(@PathVariable Long itemId) {
-        return itemService.getById(itemId);
+    public ItemResponseDto getById(@PathVariable Long itemId,
+                                   @RequestHeader(USER_ID_HEADER) Long userId) {
+        return itemService.getById(itemId, userId);
     }
 
     @GetMapping
@@ -46,6 +43,13 @@ public class ItemController {
     @GetMapping("/search")
     public List<ItemResponseDto> search(@RequestParam String text) {
         return itemService.search(text);
+    }
+
+    @PostMapping("/{itemId}/comment")
+    public CommentResponseDto addComment(@PathVariable Long itemId,
+                                         @RequestBody CommentRequestDto commentRequestDto,
+                                         @RequestHeader(USER_ID_HEADER) Long userId) {
+        return itemService.addComment(itemId, commentRequestDto, userId);
     }
 
 }

@@ -1,12 +1,13 @@
 package ru.practicum.shareit.user;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.user.dto.UserDto;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -16,12 +17,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto create(UserDto userDto) {
-
-        // проверка уникальности email
-        userRepository.findByEmail(userDto.getEmail())
-                .ifPresent(existingUser -> {
-                    throw new IllegalArgumentException("Email already exists");
-                });
+        userRepository.findByEmail(userDto.getEmail()).ifPresent(u -> {
+            throw new DataIntegrityViolationException("Email already exists");
+        });
 
         User user = UserMapper.toUser(userDto);
         return UserMapper.toUserDto(userRepository.save(user));
@@ -32,20 +30,16 @@ public class UserServiceImpl implements UserService {
         User existingUser = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
-        // проверка уникальности email при обновлении
-        if (userDto.getEmail() != null && !existingUser.getEmail().equals(userDto.getEmail())) {
-            userRepository.findByEmail(userDto.getEmail())
-                    .ifPresent(userWithSameEmail -> {
-                        if (!userWithSameEmail.getId().equals(userId)) {
-                            throw new IllegalArgumentException("Email already exists");
-                        }
-                    });
+        if (userDto.getEmail() != null &&
+                !userDto.getEmail().equals(existingUser.getEmail()) &&
+                userRepository.findByEmail(userDto.getEmail()).isPresent()) {
+            throw new DataIntegrityViolationException("Email already exists");
         }
 
         if (userDto.getName() != null) existingUser.setName(userDto.getName());
         if (userDto.getEmail() != null) existingUser.setEmail(userDto.getEmail());
 
-        return UserMapper.toUserDto(userRepository.update(existingUser));
+        return UserMapper.toUserDto(userRepository.save(existingUser));
     }
 
     @Override
@@ -57,11 +51,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDto> getAll() {
-        List<UserDto> result = new ArrayList<>();
-        for (User user : userRepository.findAll()) {
-            result.add(UserMapper.toUserDto(user));
-        }
-        return result;
+        return userRepository.findAll().stream()
+                .map(UserMapper::toUserDto)
+                .collect(Collectors.toList());
     }
 
     @Override
