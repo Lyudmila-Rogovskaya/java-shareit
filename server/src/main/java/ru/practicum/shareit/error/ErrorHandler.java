@@ -41,7 +41,6 @@ public class ErrorHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorResponse handleOtherExceptions(Exception e) {
-        e.printStackTrace();
         return new ErrorResponse("Internal server error");
     }
 

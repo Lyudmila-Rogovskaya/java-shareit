@@ -42,7 +42,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findCurrentBookingsByOwner(@Param("ownerId") Long ownerId, @Param("now") LocalDateTime now, Sort sort);
 
     @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.item.id = :itemId AND b.status = 'APPROVED' AND " +
-            "(:start < b.end AND :end > b.start)")
+            "((:start BETWEEN b.start AND b.end) OR " +
+            "(:end BETWEEN b.start AND b.end) OR " +
+            "(b.start BETWEEN :start AND :end))")
     boolean existsOverlappingBookings(@Param("itemId") Long itemId,
                                       @Param("start") LocalDateTime start,
                                       @Param("end") LocalDateTime end);

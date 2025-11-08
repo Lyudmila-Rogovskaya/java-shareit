@@ -23,12 +23,39 @@ public class BookingController {
     @GetMapping
     public ResponseEntity<Object> getBookings(@RequestHeader("X-Sharer-User-Id") long userId,
                                               @RequestParam(name = "state", defaultValue = "all") String stateParam,
-                                              @PositiveOrZero @RequestParam(name = "from", defaultValue = "0") Integer from,
-                                              @Positive @RequestParam(name = "size", defaultValue = "10") Integer size) {
+                                              @RequestParam(name = "from", defaultValue = "0") Integer from,
+                                              @RequestParam(name = "size", defaultValue = "10") Integer size) {
+
+        if (from < 0) {
+            throw new IllegalArgumentException("Parameter 'from' must be positive or zero");
+        }
+        if (size <= 0) {
+            throw new IllegalArgumentException("Parameter 'size' must be positive");
+        }
+
         BookingState state = BookingState.from(stateParam)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown state: " + stateParam));
         log.info("Get booking with state {}, userId={}, from={}, size={}", stateParam, userId, from, size);
         return bookingClient.getBookings(userId, state, from, size);
+    }
+
+    @GetMapping("/owner")
+    public ResponseEntity<Object> getByOwnerId(@RequestHeader("X-Sharer-User-Id") long userId,
+                                               @RequestParam(name = "state", defaultValue = "all") String stateParam,
+                                               @RequestParam(name = "from", defaultValue = "0") Integer from,
+                                               @RequestParam(name = "size", defaultValue = "10") Integer size) {
+
+        if (from < 0) {
+            throw new IllegalArgumentException("Parameter 'from' must be positive or zero");
+        }
+        if (size <= 0) {
+            throw new IllegalArgumentException("Parameter 'size' must be positive");
+        }
+
+        BookingState state = BookingState.from(stateParam)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown state: " + stateParam));
+        log.info("Get bookings by owner with state {}, userId={}, from={}, size={}", stateParam, userId, from, size);
+        return bookingClient.getBookingsByOwner(userId, state, from, size);
     }
 
     @PostMapping
@@ -43,6 +70,14 @@ public class BookingController {
                                              @PathVariable Long bookingId) {
         log.info("Get booking {}, userId={}", bookingId, userId);
         return bookingClient.getBooking(userId, bookingId);
+    }
+
+    @PatchMapping("/{bookingId}")
+    public ResponseEntity<Object> approveBooking(@RequestHeader("X-Sharer-User-Id") long userId,
+                                                 @PathVariable Long bookingId,
+                                                 @RequestParam boolean approved) {
+        log.info("Approve booking {}, userId={}, approved={}", bookingId, userId, approved);
+        return bookingClient.approveBooking(userId, bookingId, approved);
     }
 
 }

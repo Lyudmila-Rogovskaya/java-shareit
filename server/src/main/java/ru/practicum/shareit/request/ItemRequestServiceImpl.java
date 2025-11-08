@@ -6,7 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.item.ItemRepository;
-import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.ItemDto;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.user.User;
@@ -74,7 +74,6 @@ public class ItemRequestServiceImpl implements ItemRequestService {
         dto.setDescription(itemRequest.getDescription());
         dto.setCreated(itemRequest.getCreated());
 
-        // Найдем все вещи, созданные в ответ на этот запрос
         List<Item> items = itemRepository.findByRequestId(itemRequest.getId());
         List<ItemDto> itemDtos = items.stream()
                 .map(this::toItemDto)
