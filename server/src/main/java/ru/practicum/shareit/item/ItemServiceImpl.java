@@ -3,15 +3,16 @@ package ru.practicum.shareit.item;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.shareit.user.User;
-import ru.practicum.shareit.user.UserRepository;
-import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.BookingRepository;
 import ru.practicum.shareit.booking.BookingStatus;
+import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.item.dto.ItemRequestDto;
 import ru.practicum.shareit.item.dto.ItemResponseDto;
 import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
+import ru.practicum.shareit.request.ItemRequestRepository;
+import ru.practicum.shareit.user.User;
+import ru.practicum.shareit.user.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +30,7 @@ public class ItemServiceImpl implements ItemService {
     private final BookingRepository bookingRepository;
     private final CommentRepository commentRepository;
     private final ItemMapper itemMapper;
+    private final ItemRequestRepository itemRequestRepository;
 
     @Override
     @Transactional
@@ -38,6 +40,12 @@ public class ItemServiceImpl implements ItemService {
 
         Item item = itemMapper.toItem(itemRequestDto);
         item.setOwner(owner);
+
+        if (itemRequestDto.getRequestId() != null) {
+            itemRequestRepository.findById(itemRequestDto.getRequestId())
+                    .orElseThrow(() -> new NoSuchElementException("Request not found"));
+            item.setRequestId(itemRequestDto.getRequestId());
+        }
 
         Item savedItem = itemRepository.save(item);
         return itemMapper.toItemResponseDto(savedItem);
@@ -74,7 +82,6 @@ public class ItemServiceImpl implements ItemService {
 
         ItemResponseDto dto = itemMapper.toItemResponseDto(item);
 
-        // добавляем информацию о бронированиях только для владельца
         if (item.getOwner().getId().equals(userId)) {
             LocalDateTime now = LocalDateTime.now();
 
@@ -98,7 +105,6 @@ public class ItemServiceImpl implements ItemService {
             }
         }
 
-        // всегда добавляем комментарии для всех пользователей
         addCommentsToDto(dto, itemId);
 
         return dto;

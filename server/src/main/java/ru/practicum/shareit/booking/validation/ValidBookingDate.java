@@ -10,6 +10,7 @@ import java.lang.annotation.*;
 @Constraint(validatedBy = BookingDateValidator.class)
 @Documented
 public @interface ValidBookingDate {
+
     String message() default "Invalid booking dates";
 
     Class<?>[] groups() default {};
