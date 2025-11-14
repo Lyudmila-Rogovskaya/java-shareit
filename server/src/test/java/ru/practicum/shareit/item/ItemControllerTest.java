@@ -65,20 +65,6 @@ class ItemControllerTest {
     }
 
     @Test
-    void create_whenInvalidItem_thenReturnBadRequest() throws Exception {
-        ItemRequestDto invalidItem = new ItemRequestDto();
-        invalidItem.setName("");
-        invalidItem.setDescription("");
-        invalidItem.setAvailable(null);
-
-        mockMvc.perform(post("/items")
-                        .header("X-Sharer-User-Id", 1L)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidItem)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
     void getByOwnerId_whenUserExists_thenReturnItems() throws Exception {
         when(itemService.getByOwnerId(anyLong())).thenReturn(List.of(itemResponseDto));
 

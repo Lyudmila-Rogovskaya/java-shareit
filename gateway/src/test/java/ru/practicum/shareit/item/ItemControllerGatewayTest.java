@@ -14,8 +14,7 @@ import ru.practicum.shareit.item.dto.ItemRequestDto;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ItemController.class)
@@ -85,6 +84,43 @@ class ItemControllerGatewayTest {
                         .param("text", "test")
                         .param("from", "0")
                         .param("size", "10"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void getById_whenValidRequest_thenReturnOk() throws Exception {
+        when(itemClient.getById(anyLong(), anyLong()))
+                .thenReturn(new ResponseEntity<>("{}", HttpStatus.OK));
+
+        mockMvc.perform(get("/items/1")
+                        .header("X-Sharer-User-Id", 1L))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void update_whenValidRequest_thenReturnOk() throws Exception {
+        when(itemClient.update(anyLong(), any(), anyLong()))
+                .thenReturn(new ResponseEntity<>("{}", HttpStatus.OK));
+
+        mockMvc.perform(patch("/items/1")
+                        .header("X-Sharer-User-Id", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(itemRequestDto)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void addComment_whenValidRequest_thenReturnOk() throws Exception {
+        CommentRequestDto commentRequestDto = new CommentRequestDto();
+        commentRequestDto.setText("Great item!");
+
+        when(itemClient.addComment(anyLong(), any(), anyLong()))
+                .thenReturn(new ResponseEntity<>("{}", HttpStatus.OK));
+
+        mockMvc.perform(post("/items/1/comment")
+                        .header("X-Sharer-User-Id", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(commentRequestDto)))
                 .andExpect(status().isOk());
     }
 

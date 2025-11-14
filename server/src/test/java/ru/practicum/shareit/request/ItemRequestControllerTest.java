@@ -63,18 +63,6 @@ class ItemRequestControllerTest {
     }
 
     @Test
-    void create_whenEmptyDescription_thenReturnBadRequest() throws Exception {
-        ItemRequestDto invalidRequest = new ItemRequestDto();
-        invalidRequest.setDescription("");
-
-        mockMvc.perform(post("/requests")
-                        .header("X-Sharer-User-Id", 1L)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidRequest)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
     void getByRequestor_whenRequestsExist_thenReturnRequests() throws Exception {
         when(itemRequestService.getByRequestor(anyLong())).thenReturn(List.of(itemRequestResponseDto));
 

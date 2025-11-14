@@ -1,6 +1,8 @@
 package ru.practicum.shareit.booking;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -21,15 +23,8 @@ public class BookingController {
     @GetMapping
     public ResponseEntity<Object> getBookings(@RequestHeader("X-Sharer-User-Id") long userId,
                                               @RequestParam(name = "state", defaultValue = "all") String stateParam,
-                                              @RequestParam(name = "from", defaultValue = "0") Integer from,
-                                              @RequestParam(name = "size", defaultValue = "10") Integer size) {
-
-        if (from < 0) {
-            throw new IllegalArgumentException("Parameter 'from' must be positive or zero");
-        }
-        if (size <= 0) {
-            throw new IllegalArgumentException("Parameter 'size' must be positive");
-        }
+                                              @RequestParam(name = "from", defaultValue = "0") @PositiveOrZero Integer from,
+                                              @RequestParam(name = "size", defaultValue = "10") @Positive Integer size) {
 
         BookingState state = BookingState.from(stateParam)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown state: " + stateParam));
@@ -40,15 +35,8 @@ public class BookingController {
     @GetMapping("/owner")
     public ResponseEntity<Object> getByOwnerId(@RequestHeader("X-Sharer-User-Id") long userId,
                                                @RequestParam(name = "state", defaultValue = "all") String stateParam,
-                                               @RequestParam(name = "from", defaultValue = "0") Integer from,
-                                               @RequestParam(name = "size", defaultValue = "10") Integer size) {
-
-        if (from < 0) {
-            throw new IllegalArgumentException("Parameter 'from' must be positive or zero");
-        }
-        if (size <= 0) {
-            throw new IllegalArgumentException("Parameter 'size' must be positive");
-        }
+                                               @RequestParam(name = "from", defaultValue = "0") @PositiveOrZero Integer from,
+                                               @RequestParam(name = "size", defaultValue = "10") @Positive Integer size) {
 
         BookingState state = BookingState.from(stateParam)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown state: " + stateParam));
